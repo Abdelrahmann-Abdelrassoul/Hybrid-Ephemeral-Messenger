@@ -5,7 +5,9 @@ import { auth, googleProvider } from "@/src/lib/firebase";
 
 export default function Home() {
   const handleGoogleLogin = async () => {
-    await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider);
+    const token = await result.user.getIdToken();
+    console.log("Firebase ID token acquired:", token);
   };
 
   return (
