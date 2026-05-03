@@ -1,9 +1,12 @@
-require("dotenv").config();
+import dotenv from "dotenv";
+import express from "express";
+import http from "http";
+import cors from "cors";
+import { Server } from "socket.io";
 
-const http = require("http");
-const express = require("express");
-const cors = require("cors");
-const { Server } = require("socket.io");
+import authRoutes from "./routes/auth.routes.js";
+
+dotenv.config();
 
 const app = express();
 
@@ -13,7 +16,10 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.json());
+
+app.use("/auth", authRoutes);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
@@ -33,28 +39,41 @@ const activeUsers = new Set();
 io.on("connection", (socket) => {
   socket.on("presence:online", (userId) => {
     if (!userId) return;
+
     activeUsers.add(userId);
-    io.emit("presence:update", { userId, status: "online" });
+
+    io.emit("presence:update", {
+      userId,
+      status: "online",
+    });
   });
 
   socket.on("room:join", (roomId) => {
     if (!roomId) return;
+
     socket.join(roomId);
   });
 
   socket.on("room:leave", (roomId) => {
     if (!roomId) return;
+
     socket.leave(roomId);
   });
 
   socket.on("chat:message", ({ roomId, message }) => {
     if (!roomId || !message) return;
+
     io.to(roomId).emit("chat:message", message);
   });
 
   socket.on("chat:wipe", ({ roomId, initiatedBy }) => {
     if (!roomId) return;
-    io.to(roomId).emit("chat:wipe", { roomId, initiatedBy, at: Date.now() });
+
+    io.to(roomId).emit("chat:wipe", {
+      roomId,
+      initiatedBy,
+      at: Date.now(),
+    });
   });
 
   socket.on("system:pulse", (payload) => {
@@ -70,6 +89,7 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => {
   console.log(`Backend listening on port ${PORT}`);
 });
