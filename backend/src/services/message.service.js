@@ -1,0 +1,43 @@
+import { redis } from "../config/redis.js";
+
+const DEFAULT_MESSAGE_TTL_SECONDS = 120;
+
+export function getTTL() {
+  const ttl = Number(process.env.MESSAGE_TTL_SECONDS || 120);
+
+  if (Number.isFinite(ttl) && ttl > 0) {
+    return ttl;
+  }
+
+  return DEFAULT_MESSAGE_TTL_SECONDS;
+}
+
+export function getChatKey(uid1, uid2) {
+  if (!uid1 || !uid2) {
+    throw new Error("uid1 and uid2 are required to build a chat key");
+  }
+
+  return `chat:${[uid1, uid2].sort().join("_")}`;
+}
+
+export async function saveMessage(uid1, uid2, message) {
+  const chatKey = getChatKey(uid1, uid2);
+  const serializedMessage = JSON.stringify(message);
+  const ttlSeconds = getTTL();
+
+  await redis.rPush(chatKey, serializedMessage);
+  await redis.expire(chatKey, ttlSeconds);
+
+  return {
+    key: chatKey,
+    ttl: ttlSeconds,
+    message,
+  };
+}
+
+export async function getMessages(uid1, uid2) {
+  const chatKey = getChatKey(uid1, uid2);
+  const storedMessages = await redis.lRange(chatKey, 0, -1);
+
+  return storedMessages.map((storedMessage) => JSON.parse(storedMessage));
+}
