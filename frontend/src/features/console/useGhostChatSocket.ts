@@ -36,12 +36,16 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       }
       socketRef.current = socket;
 
-      const onConnect = () => setSocketReady(true);
+      const onConnect = () => {
+        setSocketReady(true);
+        socket.emit("presence:online", user.uid);
+      };
       const onDisconnect = () => setSocketReady(false);
       socket.on("connect", onConnect);
       socket.on("disconnect", onDisconnect);
       if (socket.connected) {
         setSocketReady(true);
+        socket.emit("presence:online", user.uid);
       }
 
       const peer = peerUid.trim();
