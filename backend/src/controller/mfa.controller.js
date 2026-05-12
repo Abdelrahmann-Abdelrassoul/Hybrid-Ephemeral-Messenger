@@ -7,6 +7,27 @@ import { setPendingMfa, getPendingMfa, promoteSessionToSecure } from "../service
 
 const PENDING_MFA = "PENDING_MFA";
 
+/** Visible prefix for pulse logs only; never log full E.164. */
+function maskPhoneForPulse(e164) {
+  const s = String(e164).trim();
+  if (!s.startsWith("+") || s.length < 3) {
+    return "+XXXXX...";
+  }
+  return `${s.slice(0, 3)}XXXXX...`;
+}
+
+function emitMfaPulseToUser(req, line) {
+  const io = req.app?.get?.("io");
+  const uid = req.user?.uid;
+  if (!io || !uid) {
+    return;
+  }
+  io.to(`user:${uid}`).emit("system:pulse", {
+    at: Date.now(),
+    line,
+  });
+}
+
 function isValidOtpCode(code) {
   if (typeof code !== "string") return false;
   const t = code.trim();
@@ -34,6 +55,13 @@ export async function startMfaController(req, res) {
         message: "Verification SMS was sent but MFA session could not be stored. Try again shortly.",
       });
     }
+
+    const masked = maskPhoneForPulse(phoneNumber.trim());
+    emitMfaPulseToUser(
+      req,
+      `[TWILIO]: MFA Challenge dispatched to ${masked}`
+    );
+    emitMfaPulseToUser(req, "[AUTH]: Awaiting SMS code verification.");
 
     return res.status(200).json({
       success: true,
@@ -110,6 +138,11 @@ export async function verifyMfaController(req, res) {
         message: "Verification succeeded but session could not be secured. Try again.",
       });
     }
+
+    emitMfaPulseToUser(
+      req,
+      "[TWILIO]: SMS Code Verified. Session promoted to SECURE."
+    );
 
     return res.status(200).json({
       success: true,
