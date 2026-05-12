@@ -26,6 +26,19 @@ export async function createSmsVerification(e164Phone) {
   });
 }
 
+export async function checkSmsVerification(e164Phone, code) {
+  const env = getVerifyEnv();
+  if (!env) {
+    const err = new Error(CONFIG_ERR);
+    throw err;
+  }
+  const client = twilio(env.accountSid, env.authToken);
+  return client.verify.v2.services(env.serviceSid).verificationChecks.create({
+    to: e164Phone,
+    code,
+  });
+}
+
 export function isLikelyE164(phone) {
   if (typeof phone !== "string") return false;
   const t = phone.trim();
