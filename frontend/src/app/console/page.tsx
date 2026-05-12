@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/src/lib/firebase";
@@ -13,9 +13,30 @@ export default function GhostConsolePage() {
   const [ready, setReady] = useState(false);
   const [label, setLabel] = useState<string | null>(null);
 
-  const { peerUid, setPeerUid, messages, socketReady, sendMessage, peerOk, logs } = useGhostChatSocket({
-    enabled: ready,
-  });
+  const { peerUid, setPeerUid, messages, socketReady, sendMessage, peerOk, logs, presenceByUid, presenceLabelByUid, selfUid } =
+    useGhostChatSocket({
+      enabled: ready,
+    });
+
+  const presenceRoster = useMemo(() => {
+    const peer = peerUid.trim();
+    const rows: { uid: string; label: string; isActive: boolean }[] = [];
+    if (selfUid) {
+      rows.push({
+        uid: selfUid,
+        label: "You",
+        isActive: presenceByUid[selfUid] ?? false,
+      });
+    }
+    if (peer && peer !== selfUid) {
+      rows.push({
+        uid: peer,
+        label: "Peer",
+        isActive: presenceByUid[peer] ?? false,
+      });
+    }
+    return rows;
+  }, [selfUid, peerUid, presenceByUid]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -55,6 +76,46 @@ export default function GhostConsolePage() {
             Sign out
           </button>
         </header>
+
+        <section
+          aria-label="Presence roster"
+          className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
+        >
+          <h2 className="font-mono text-xs font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+            Presence
+          </h2>
+          <ul className="mt-3 flex flex-col gap-2">
+            {presenceRoster.length === 0 ? (
+              <li className="font-mono text-xs text-zinc-500">No users in roster.</li>
+            ) : (
+              presenceRoster.map((user) => (
+                <li
+                  key={user.uid}
+                  className="flex items-center justify-between gap-4 font-mono text-sm text-zinc-800 dark:text-zinc-200"
+                >
+                  <span className="min-w-0 shrink text-zinc-600 dark:text-zinc-400" title={user.uid}>
+                    <span className="text-zinc-900 dark:text-zinc-100">{user.label}</span>
+                    {presenceLabelByUid[user.uid] ? (
+                      <span className="ml-2 text-zinc-700 dark:text-zinc-300">
+                        {presenceLabelByUid[user.uid]}
+                      </span>
+                    ) : null}
+                    <span className="ml-2 break-all font-mono text-[11px] text-zinc-500">{user.uid}</span>
+                  </span>
+                  <span
+                    className={
+                      user.isActive
+                        ? "shrink-0 text-emerald-600 dark:text-emerald-400"
+                        : "shrink-0 text-zinc-500 dark:text-zinc-500"
+                    }
+                  >
+                    {user.isActive ? "Active" : "Offline"}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
 
         <div className="flex flex-col gap-2">
           <label className="font-mono text-xs text-zinc-600 dark:text-zinc-400" htmlFor="peer-uid">

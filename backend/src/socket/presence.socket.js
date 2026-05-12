@@ -1,5 +1,14 @@
 import { redis } from "../config/redis.js";
 
+function presenceDisplayName(socketUser) {
+  if (!socketUser || !socketUser.uid) return "";
+  const name = socketUser.name && String(socketUser.name).trim();
+  if (name) return name;
+  const email = socketUser.email && String(socketUser.email).trim();
+  if (email) return email;
+  return socketUser.uid;
+}
+
 const activeUsers = new Set();
 
 export function registerPresenceSocket(io, socket) {
@@ -17,6 +26,7 @@ export function registerPresenceSocket(io, socket) {
 
     io.emit("presence:update", {
       uid,
+      displayName: presenceDisplayName(socket.user),
       status: "online",
     });
   });
@@ -35,6 +45,7 @@ export function registerPresenceSocket(io, socket) {
 
     io.emit("presence:update", {
       uid,
+      displayName: presenceDisplayName(socket.user),
       status: "offline",
     });
   });

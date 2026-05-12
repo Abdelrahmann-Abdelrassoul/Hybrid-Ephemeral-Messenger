@@ -15,6 +15,8 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
   const [messages, setMessages] = useState<GhostChatMessage[]>([]);
   const [logs, setLogs] = useState<SystemPulseLog[]>([]);
   const [socketReady, setSocketReady] = useState(false);
+  const [presenceByUid, setPresenceByUid] = useState<Record<string, boolean>>({});
+  const [presenceLabelByUid, setPresenceLabelByUid] = useState<Record<string, string>>({});
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -36,15 +38,28 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       }
       socketRef.current = socket;
 
+      const seedSelfLabel = () => {
+        const selfName =
+          user.displayName?.trim() ||
+          user.email?.trim() ||
+          (user.uid.length > 10 ? `${user.uid.slice(0, 8)}…` : user.uid);
+        setPresenceLabelByUid((prev) => ({ ...prev, [user.uid]: selfName }));
+      };
+
       const onConnect = () => {
         setSocketReady(true);
+        seedSelfLabel();
         socket.emit("presence:online", user.uid);
       };
-      const onDisconnect = () => setSocketReady(false);
+      const onDisconnect = () => {
+        setSocketReady(false);
+        setPresenceByUid((prev) => ({ ...prev, [user.uid]: false }));
+      };
       socket.on("connect", onConnect);
       socket.on("disconnect", onDisconnect);
       if (socket.connected) {
         setSocketReady(true);
+        seedSelfLabel();
         socket.emit("presence:online", user.uid);
       }
 
@@ -71,18 +86,33 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       });
 
       socket.on("presence:update", (raw: unknown) => {
-        const p = raw as { uid?: string; status?: string };
+        const p = raw as { uid?: string; status?: string; displayName?: string };
         if (
           typeof p.uid !== "string" ||
           (p.status !== "online" && p.status !== "offline")
         ) {
           return;
         }
+        const uid = p.uid;
+        const status = p.status;
+        const displayName =
+          typeof p.displayName === "string" && p.displayName.trim().length > 0
+            ? p.displayName.trim()
+            : uid.length > 10
+              ? `${uid.slice(0, 8)}…`
+              : uid;
+
+        setPresenceByUid((prev) => ({
+          ...prev,
+          [uid]: status === "online",
+        }));
+        setPresenceLabelByUid((prev) => ({ ...prev, [uid]: displayName }));
+        const pulseWho = displayName === uid ? uid : `${displayName} [${uid}]`;
         setLogs((prev) => [
           ...prev,
           {
             at: Date.now(),
-            line: `[PRESENCE]: ${p.uid} → ${p.status}`,
+            line: `[PRESENCE]: ${pulseWho} → ${status}`,
           },
         ]);
       });
@@ -92,6 +122,8 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       cancelled = true;
       setSocketReady(false);
       setLogs([]);
+      setPresenceByUid({});
+      setPresenceLabelByUid({});
       void socketPromise.then((s) => {
         s.removeAllListeners();
         s.disconnect();
@@ -118,6 +150,7 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
   );
 
   const peerOk = peerUid.trim().length > 0;
+  const selfUid = auth.currentUser?.uid ?? "";
 
   return {
     peerUid,
@@ -127,5 +160,8 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
     sendMessage,
     peerOk,
     logs,
+    presenceByUid,
+    presenceLabelByUid,
+    selfUid,
   };
 }
