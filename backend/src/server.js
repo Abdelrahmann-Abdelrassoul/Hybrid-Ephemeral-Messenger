@@ -84,27 +84,41 @@ io.on("connection", (socket) => {
   });
 
   socket.on("room:join", async (payload) => {
+    if (payload && typeof payload === "object" && payload.uid1 && payload.uid2) {
+      const me = socket.user.uid;
+      if (me !== payload.uid1 && me !== payload.uid2) return;
+
+      const room = `chat:${[payload.uid1, payload.uid2].sort().join("_")}`;
+      socket.join(room);
+
+      try {
+        const messages = await getMessages(payload.uid1, payload.uid2);
+        socket.emit("chat:history", {
+          roomId: room,
+          messages,
+        });
+      } catch (error) {
+        console.error("Failed to load chat history:", error);
+      }
+      return;
+    }
+
     const roomId = resolveChatRoom(payload);
     if (!roomId) return;
 
     socket.join(roomId);
-
-    if (!payload || typeof payload !== "object" || !payload.uid1 || !payload.uid2) {
-      return;
-    }
-
-    try {
-      const messages = await getMessages(payload.uid1, payload.uid2);
-      socket.emit("chat:history", {
-        roomId,
-        messages,
-      });
-    } catch (error) {
-      console.error("Failed to load chat history:", error);
-    }
   });
 
   socket.on("room:leave", (payload) => {
+    if (payload && typeof payload === "object" && payload.uid1 && payload.uid2) {
+      const me = socket.user.uid;
+      if (me !== payload.uid1 && me !== payload.uid2) return;
+
+      const room = `chat:${[payload.uid1, payload.uid2].sort().join("_")}`;
+      socket.leave(room);
+      return;
+    }
+
     const roomId = resolveChatRoom(payload);
     if (!roomId) return;
 
