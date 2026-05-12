@@ -10,8 +10,12 @@ type UseGhostChatSocketOptions = {
   enabled: boolean;
 };
 
+export const GHOST_CONSOLE_TTL_OPTIONS = [10, 30, 60, 120] as const;
+export type GhostConsoleTtlChoice = (typeof GHOST_CONSOLE_TTL_OPTIONS)[number];
+
 export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
   const [peerUid, setPeerUid] = useState("");
+  const [messageTtlSeconds, setMessageTtlSeconds] = useState<GhostConsoleTtlChoice>(120);
   const [messages, setMessages] = useState<GhostChatMessage[]>([]);
   const [logs, setLogs] = useState<SystemPulseLog[]>([]);
   const [socketReady, setSocketReady] = useState(false);
@@ -144,9 +148,10 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
         senderUid: user.uid,
         receiverUid: peer,
         message: { author, text },
+        ttlSeconds: messageTtlSeconds,
       });
     },
-    [peerUid]
+    [peerUid, messageTtlSeconds]
   );
 
   const peerOk = peerUid.trim().length > 0;
@@ -163,5 +168,7 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
     presenceByUid,
     presenceLabelByUid,
     selfUid,
+    messageTtlSeconds,
+    setMessageTtlSeconds,
   };
 }

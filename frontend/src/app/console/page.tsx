@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/src/lib/firebase";
-import { useGhostChatSocket } from "@/src/features/console/useGhostChatSocket";
+import {
+  useGhostChatSocket,
+  GHOST_CONSOLE_TTL_OPTIONS,
+  type GhostConsoleTtlChoice,
+} from "@/src/features/console/useGhostChatSocket";
 import GhostChat from "@/src/components/GhostChat";
 import SystemPulseMonitor from "@/src/components/SystemPulseMonitor";
 
@@ -13,10 +17,22 @@ export default function GhostConsolePage() {
   const [ready, setReady] = useState(false);
   const [label, setLabel] = useState<string | null>(null);
 
-  const { peerUid, setPeerUid, messages, socketReady, sendMessage, peerOk, logs, presenceByUid, presenceLabelByUid, selfUid } =
-    useGhostChatSocket({
-      enabled: ready,
-    });
+  const {
+    peerUid,
+    setPeerUid,
+    messages,
+    socketReady,
+    sendMessage,
+    peerOk,
+    logs,
+    presenceByUid,
+    presenceLabelByUid,
+    selfUid,
+    messageTtlSeconds,
+    setMessageTtlSeconds,
+  } = useGhostChatSocket({
+    enabled: ready,
+  });
 
   const presenceRoster = useMemo(() => {
     const peer = peerUid.trim();
@@ -117,18 +133,42 @@ export default function GhostConsolePage() {
           </ul>
         </section>
 
-        <div className="flex flex-col gap-2">
-          <label className="font-mono text-xs text-zinc-600 dark:text-zinc-400" htmlFor="peer-uid">
-            Peer Firebase UID (required to send and receive DMs)
-          </label>
-          <input
-            id="peer-uid"
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-            placeholder="other-user-uid"
-            value={peerUid}
-            onChange={(e) => setPeerUid(e.target.value)}
-            autoComplete="off"
-          />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <label className="font-mono text-xs text-zinc-600 dark:text-zinc-400" htmlFor="peer-uid">
+              Peer Firebase UID
+            </label>
+            <input
+              id="peer-uid"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              placeholder="other-user-uid"
+              value={peerUid}
+              onChange={(e) => setPeerUid(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <div className="flex w-full shrink-0 flex-col gap-2 sm:w-52">
+            <label
+              className="font-mono text-xs text-zinc-600 dark:text-zinc-400"
+              htmlFor="message-ttl"
+            >
+              Message TTL
+            </label>
+            <select
+              id="message-ttl"
+              value={messageTtlSeconds}
+              onChange={(e) =>
+                setMessageTtlSeconds(Number(e.target.value) as GhostConsoleTtlChoice)
+              }
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            >
+              {GHOST_CONSOLE_TTL_OPTIONS.map((sec) => (
+                <option key={sec} value={sec}>
+                  {sec} seconds
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

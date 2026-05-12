@@ -20,6 +20,19 @@ export function getTTL() {
   return ttl;
 }
 
+export const MESSAGE_TTL_CHOICES = Object.freeze([10, 30, 60, 120]);
+
+function resolveTtlForSave(requested) {
+  if (requested === undefined || requested === null) {
+    return getTTL();
+  }
+  const n = Number(requested);
+  if (!Number.isInteger(n) || !MESSAGE_TTL_CHOICES.includes(n)) {
+    return getTTL();
+  }
+  return n;
+}
+
 export function getChatKey(uid1, uid2) {
   if (!uid1 || !uid2) {
     throw new Error("uid1 and uid2 are required to build a chat key");
@@ -28,10 +41,10 @@ export function getChatKey(uid1, uid2) {
   return `chat:${[uid1, uid2].sort().join("_")}`;
 }
 
-export async function saveMessage(uid1, uid2, message) {
+export async function saveMessage(uid1, uid2, message, ttlSecondsRequested) {
   const chatKey = getChatKey(uid1, uid2);
   const serializedMessage = JSON.stringify(message);
-  const ttlSeconds = getTTL();
+  const ttlSeconds = resolveTtlForSave(ttlSecondsRequested);
 
   await redis.rPush(chatKey, serializedMessage);
   await redis.expire(chatKey, ttlSeconds);
