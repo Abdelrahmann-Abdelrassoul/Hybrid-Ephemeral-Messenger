@@ -3,7 +3,7 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
-
+import admin from "./config/firebaseAdmin.js";
 import { connectRedis } from "./config/redis.js";
 import authRoutes from "./routes/auth.routes.js";
 import { getChatKey, getMessages, saveMessage } from "./services/message.service.js";
@@ -36,6 +36,20 @@ const io = new Server(server, {
   },
 });
 
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth && socket.handshake.auth.token;
+    if (!token || typeof token !== "string") {
+      return next(new Error("Unauthorized"));
+    }
+    const decoded = await admin.auth().verifyIdToken(token);
+    socket.user = decoded;
+    next();
+  } catch (err) {
+    next(new Error("Unauthorized"));
+  }
+});
+
 const activeUsers = new Set();
 
 function resolveChatRoom(payload) {
@@ -55,7 +69,8 @@ function resolveChatRoom(payload) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("presence:online", (userId) => {
+  socket.on("presence:online", (_userId) => {
+    const userId = socket.user && socket.user.uid;
     if (!userId) return;
 
     activeUsers.add(userId);
