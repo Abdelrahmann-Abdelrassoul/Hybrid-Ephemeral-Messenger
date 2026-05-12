@@ -14,7 +14,7 @@ export async function getMessageHistory(req, res) {
     if (receiverUid === req.user.uid) {
       return res.status(400).json({
         success: false,
-        message: "receiverUid must be a different user",
+        message: "Cannot message yourself",
       });
     }
 

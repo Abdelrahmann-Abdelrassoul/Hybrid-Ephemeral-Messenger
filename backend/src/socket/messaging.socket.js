@@ -15,6 +15,7 @@ export function registerMessagingSocket(io, socket) {
     }
 
     if (senderUid !== socket.user.uid) return;
+    if (senderUid === receiverUid) return;
 
     try {
       const saved = await saveMessage(senderUid, receiverUid, message, ttlSeconds);
@@ -32,6 +33,7 @@ export function registerMessagingSocket(io, socket) {
   socket.on("chat:message", async ({ roomId, uid1, uid2, message, ttlSeconds }) => {
     const resolvedRoomId = resolveChatRoom({ roomId, uid1, uid2 });
     if (!resolvedRoomId || !uid1 || !uid2 || !message) return;
+    if (uid1 === uid2) return;
 
     try {
       const saved = await saveMessage(uid1, uid2, message, ttlSeconds);

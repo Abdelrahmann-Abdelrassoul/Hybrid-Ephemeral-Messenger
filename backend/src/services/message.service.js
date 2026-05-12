@@ -60,6 +60,9 @@ export function assertValidMessageBody(message) {
 
 export async function saveMessage(uid1, uid2, message, ttlSecondsRequested) {
   assertValidMessageBody(message);
+  if (uid1 === uid2) {
+    throw new Error("Cannot message yourself");
+  }
   const chatKey = getChatKey(uid1, uid2);
   const serializedMessage = JSON.stringify(message);
   const ttlSeconds = resolveTtlForSave(ttlSecondsRequested);

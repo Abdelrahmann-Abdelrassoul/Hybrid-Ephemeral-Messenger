@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express from "express";
 import http from "http";
 import cors from "cors";
+import helmet from "helmet";
 import { Server } from "socket.io";
 import { connectDB } from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
@@ -14,6 +15,8 @@ import { attachSocketHandlers } from "./socket/index.js";
 dotenv.config();
 
 const app = express();
+
+app.use(helmet());
 
 app.use(
   cors({
