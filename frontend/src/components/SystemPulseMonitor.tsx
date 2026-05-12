@@ -5,7 +5,7 @@ export type SystemPulseLog = {
 } & Record<string, unknown>;
 
 type SystemPulseMonitorProps = {
-  pulses: SystemPulseLog[];
+  logs: SystemPulseLog[];
 };
 
 function formatLine(pulse: SystemPulseLog): string {
@@ -19,7 +19,7 @@ function formatLine(pulse: SystemPulseLog): string {
   return `[${stamp}] ${tail}`;
 }
 
-export default function SystemPulseMonitor({ pulses }: SystemPulseMonitorProps) {
+export default function SystemPulseMonitor({ logs }: SystemPulseMonitorProps) {
   return (
     <section
       aria-label="System pulse monitor"
@@ -35,11 +35,11 @@ export default function SystemPulseMonitor({ pulses }: SystemPulseMonitorProps) 
         className="overflow-y-auto p-3 font-mono text-[11px] leading-relaxed text-zinc-300"
         style={{ fontFamily: "var(--font-geist-mono), ui-monospace, monospace" }}
       >
-        {pulses.length === 0 ? (
+        {logs.length === 0 ? (
           <p className="text-zinc-500">No pulses yet.</p>
         ) : (
           <ul className="flex flex-col gap-1">
-            {pulses.map((pulse, index) => (
+            {logs.map((pulse, index) => (
               <li key={`${pulse.at}-${index}`} className="list-none whitespace-pre-wrap break-all">
                 {formatLine(pulse)}
               </li>

@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/src/lib/firebase";
 import { useGhostChatSocket } from "@/src/features/console/useGhostChatSocket";
 import GhostChat from "@/src/components/GhostChat";
+import SystemPulseMonitor from "@/src/components/SystemPulseMonitor";
 
 export default function GhostConsolePage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [label, setLabel] = useState<string | null>(null);
 
-  const { peerUid, setPeerUid, messages, socketReady, sendMessage, peerOk } = useGhostChatSocket({
+  const { peerUid, setPeerUid, messages, socketReady, sendMessage, peerOk, logs } = useGhostChatSocket({
     enabled: ready,
   });
 
@@ -68,6 +69,8 @@ export default function GhostConsolePage() {
             autoComplete="off"
           />
         </div>
+
+        <SystemPulseMonitor logs={logs} />
 
         <GhostChat
           messages={messages}

@@ -4,6 +4,7 @@ import { auth } from "@/src/lib/firebase";
 import { parseGhostMessagePayload } from "@/src/lib/parseGhostMessage";
 import { createAuthenticatedSocket } from "@/src/lib/sockets";
 import type { GhostChatMessage } from "@/src/components/GhostChat";
+import type { SystemPulseLog } from "@/src/components/SystemPulseMonitor";
 
 type UseGhostChatSocketOptions = {
   enabled: boolean;
@@ -12,6 +13,7 @@ type UseGhostChatSocketOptions = {
 export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
   const [peerUid, setPeerUid] = useState("");
   const [messages, setMessages] = useState<GhostChatMessage[]>([]);
+  const [logs, setLogs] = useState<SystemPulseLog[]>([]);
   const [socketReady, setSocketReady] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
@@ -59,11 +61,16 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       socket.on("chat:wipe", () => {
         setMessages([]);
       });
+
+      socket.on("system:pulse", (log: unknown) => {
+        setLogs((prev) => [...prev, log as SystemPulseLog]);
+      });
     });
 
     return () => {
       cancelled = true;
       setSocketReady(false);
+      setLogs([]);
       void socketPromise.then((s) => {
         s.removeAllListeners();
         s.disconnect();
@@ -98,5 +105,6 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
     socketReady,
     sendMessage,
     peerOk,
+    logs,
   };
 }
