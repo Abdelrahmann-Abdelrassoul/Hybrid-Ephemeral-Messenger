@@ -7,6 +7,7 @@ import { connectDB } from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
 import { attachRedisExpirePulses } from "./config/redisExpirePulse.js";
 import authRoutes from "./routes/auth.routes.js";
+import messagesRoutes from "./routes/messages.routes.js";
 import { attachSocketHandlers } from "./socket/index.js";
 
 dotenv.config();
@@ -23,6 +24,7 @@ app.use(
 app.use(express.json());
 
 app.use("/auth", authRoutes);
+app.use("/messages", messagesRoutes);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
