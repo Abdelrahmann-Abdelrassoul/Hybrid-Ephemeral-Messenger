@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { auth } from "@/src/lib/firebase";
+import type { GhostDirectoryUser } from "@/src/components/UserList";
 import { parseGhostMessagePayload } from "@/src/lib/parseGhostMessage";
 import { createAuthenticatedSocket } from "@/src/lib/sockets";
 import type { GhostChatMessage } from "@/src/components/GhostChat";
 import type { SystemPulseLog } from "@/src/components/SystemPulseMonitor";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 type UseGhostChatSocketOptions = {
   enabled: boolean;
@@ -14,7 +17,8 @@ export const GHOST_CONSOLE_TTL_OPTIONS = [10, 30, 60, 120] as const;
 export type GhostConsoleTtlChoice = (typeof GHOST_CONSOLE_TTL_OPTIONS)[number];
 
 export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
-  const [peerUid, setPeerUid] = useState("");
+  const [peerUid, setPeerUidInternal] = useState("");
+  const [selectedUser, setSelectedUser] = useState<GhostDirectoryUser | null>(null);
   const [messageTtlSeconds, setMessageTtlSeconds] = useState<GhostConsoleTtlChoice>(120);
   const [messages, setMessages] = useState<GhostChatMessage[]>([]);
   const [logs, setLogs] = useState<SystemPulseLog[]>([]);
@@ -23,9 +27,74 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
   const [presenceLabelByUid, setPresenceLabelByUid] = useState<Record<string, string>>({});
   const socketRef = useRef<Socket | null>(null);
 
+  const fetchMessages = useCallback(async (receiverUid: string, init?: { signal?: AbortSignal }) => {
+    const peer = receiverUid.trim();
+    if (!peer) {
+      setMessages([]);
+      return;
+    }
+    const me = auth.currentUser;
+    if (!me) {
+      setMessages([]);
+      return;
+    }
+    try {
+      const token = await me.getIdToken();
+      const res = await fetch(`${API_URL}/messages/${encodeURIComponent(peer)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: init?.signal,
+      });
+      if (!res.ok) {
+        setMessages([]);
+        return;
+      }
+      const data = (await res.json()) as { messages?: unknown[] };
+      const raw = Array.isArray(data.messages) ? data.messages : [];
+      const mapped: GhostChatMessage[] = [];
+      for (const m of raw) {
+        const p = parseGhostMessagePayload(m);
+        if (p) mapped.push({ id: crypto.randomUUID(), author: p.author, body: p.body });
+      }
+      setMessages(mapped);
+    } catch (e) {
+      if (init?.signal?.aborted) return;
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setMessages([]);
+    }
+  }, []);
+
   useEffect(() => {
+    if (!enabled) return;
+    const peer = peerUid.trim();
+    if (!peer) {
+      setMessages([]);
+      return;
+    }
+    if (selectedUser?.uid === peer) {
+      return;
+    }
+    const ac = new AbortController();
     setMessages([]);
-  }, [peerUid]);
+    void fetchMessages(peer, { signal: ac.signal });
+    return () => ac.abort();
+  }, [peerUid, enabled, fetchMessages, selectedUser]);
+
+  const selectContact = useCallback(
+    (user: GhostDirectoryUser) => {
+      setSelectedUser(user);
+      setPeerUidInternal(user.uid);
+      void fetchMessages(user.uid);
+    },
+    [fetchMessages]
+  );
+
+  const setPeerUid = useCallback((v: string) => {
+    setPeerUidInternal(v);
+    setSelectedUser((prev) => {
+      if (!prev) return null;
+      return prev.uid === v.trim() ? prev : null;
+    });
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -170,5 +239,8 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
     selfUid,
     messageTtlSeconds,
     setMessageTtlSeconds,
+    selectedUser,
+    selectContact,
+    fetchMessages,
   };
 }

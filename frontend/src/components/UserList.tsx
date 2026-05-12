@@ -13,7 +13,7 @@ export type GhostDirectoryUser = {
 
 type UserListProps = {
   selectedUid: string;
-  onSelect: (uid: string) => void;
+  onSelect: (user: GhostDirectoryUser) => void;
 };
 
 export default function UserList({ selectedUid, onSelect }: UserListProps) {
@@ -87,7 +87,7 @@ export default function UserList({ selectedUid, onSelect }: UserListProps) {
                 <li key={u.uid}>
                   <button
                     type="button"
-                    onClick={() => onSelect(u.uid)}
+                    onClick={() => onSelect(u)}
                     className={
                       active
                         ? "w-full rounded-lg bg-amber-500/15 px-2 py-2 text-left font-mono text-xs text-zinc-900 ring-1 ring-amber-500/40 transition dark:text-zinc-100"

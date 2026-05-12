@@ -31,6 +31,7 @@ export default function GhostConsolePage() {
     selfUid,
     messageTtlSeconds,
     setMessageTtlSeconds,
+    selectContact,
   } = useGhostChatSocket({
     enabled: ready,
   });
@@ -79,7 +80,7 @@ export default function GhostConsolePage() {
     <main className="min-h-screen bg-zinc-50 p-6 dark:bg-black">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:flex-row lg:items-start">
         <aside className="w-full shrink-0 lg:w-56 xl:w-64">
-          <UserList selectedUid={peerUid} onSelect={setPeerUid} />
+          <UserList selectedUid={peerUid} onSelect={selectContact} />
         </aside>
         <div className="min-w-0 flex-1 flex flex-col gap-6">
         <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
