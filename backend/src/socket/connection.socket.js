@@ -13,7 +13,5 @@ export function registerConnectionSocket(socket) {
     line: `[SOCKET]: User ${label} connected.`,
   });
 
-  socket.on("disconnect", () => {
-    // Presence offlining can be tied to session/user mapping as needed.
-  });
+  socket.on("disconnect", async () => {});
 }
