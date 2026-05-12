@@ -15,8 +15,9 @@ export async function enqueueReadOnce(receiverUid, payload) {
 }
 
 export async function dequeueReadOnce(receiverUid) {
-  const key = getReadOnceKey(receiverUid);
-  const raw = await redis.lPop(key);
+  const readOnceKey = getReadOnceKey(receiverUid);
+  const result = await redis.multi().lPop(readOnceKey).exec();
+  const raw = Array.isArray(result) ? result[0] : null;
   if (raw == null || raw === "") {
     return null;
   }
