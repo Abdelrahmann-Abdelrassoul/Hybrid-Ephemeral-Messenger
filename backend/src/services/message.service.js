@@ -41,3 +41,16 @@ export async function getMessages(uid1, uid2) {
 
   return storedMessages.map((storedMessage) => JSON.parse(storedMessage));
 }
+
+export async function getMessagesWithTTL(uid1, uid2) {
+  const chatKey = getChatKey(uid1, uid2);
+  const [storedMessages, ttl] = await Promise.all([
+    redis.lRange(chatKey, 0, -1),
+    redis.ttl(chatKey),
+  ]);
+
+  return {
+    messages: storedMessages.map((storedMessage) => JSON.parse(storedMessage)),
+    ttl,
+  };
+}

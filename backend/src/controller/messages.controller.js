@@ -1,4 +1,4 @@
-import { getMessages } from "../services/message.service.js";
+import { getMessagesWithTTL } from "../services/message.service.js";
 
 export async function getMessageHistory(req, res) {
   try {
@@ -18,11 +18,12 @@ export async function getMessageHistory(req, res) {
       });
     }
 
-    const messages = await getMessages(req.user.uid, receiverUid);
+    const { messages, ttl } = await getMessagesWithTTL(req.user.uid, receiverUid);
 
     return res.status(200).json({
       success: true,
       messages,
+      ttl,
     });
   } catch (error) {
     console.error("getMessageHistory:", error);
