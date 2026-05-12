@@ -39,7 +39,7 @@ export default function GhostConsolePage() {
 
   return (
     <main className="min-h-screen bg-zinc-50 p-6 dark:bg-black">
-      <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -70,13 +70,14 @@ export default function GhostConsolePage() {
           />
         </div>
 
-        <SystemPulseMonitor logs={logs} />
-
-        <GhostChat
-          messages={messages}
-          onSend={sendMessage}
-          disabled={!peerOk || !socketReady}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <GhostChat
+            messages={messages}
+            onSend={sendMessage}
+            disabled={!peerOk || !socketReady}
+          />
+          <SystemPulseMonitor logs={logs} />
+        </div>
       </div>
     </main>
   );
