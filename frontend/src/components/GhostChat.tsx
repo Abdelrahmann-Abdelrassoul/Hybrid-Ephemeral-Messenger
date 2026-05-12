@@ -27,9 +27,9 @@ export default function GhostChat({ messages, onSend, disabled }: GhostChatProps
   return (
     <section
       aria-label="Ghost chat"
-      className="flex min-h-[320px] flex-col overflow-hidden rounded-xl border border-zinc-300 bg-zinc-950 text-zinc-100 shadow-sm dark:border-zinc-700"
+      className="flex h-[80vh] flex-col overflow-hidden rounded-xl border border-zinc-300 bg-zinc-950 text-zinc-100 shadow-sm dark:border-zinc-700"
     >
-      <header className="border-b border-zinc-800 bg-zinc-900 px-4 py-2">
+      <header className="shrink-0 border-b border-zinc-800 bg-zinc-900 px-4 py-2">
         <h2 className="font-mono text-xs font-medium uppercase tracking-widest text-emerald-400/90">
           Ghost chat
         </h2>
@@ -37,9 +37,9 @@ export default function GhostChat({ messages, onSend, disabled }: GhostChatProps
           volatile · plain lines · no bubbles
         </p>
       </header>
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <ul
-          className="font-mono flex flex-1 flex-col gap-0 overflow-y-auto p-3 text-sm leading-normal"
+          className="font-mono flex flex-col gap-0 p-3 text-sm leading-normal"
           style={{ fontFamily: "var(--font-geist-mono), ui-monospace, monospace" }}
         >
           {messages.length === 0 ? (
@@ -56,7 +56,7 @@ export default function GhostChat({ messages, onSend, disabled }: GhostChatProps
           )}
         </ul>
       </div>
-      <footer className="flex items-center gap-2 border-t border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-sm">
+      <footer className="shrink-0 flex items-center gap-2 border-t border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-sm">
         <span className="shrink-0 select-none text-emerald-500">&gt;</span>
         <input
           type="text"

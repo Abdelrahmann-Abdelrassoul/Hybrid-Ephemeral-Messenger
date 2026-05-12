@@ -26,16 +26,16 @@ export default function SystemPulseMonitor({ logs }: SystemPulseMonitorProps) {
   return (
     <section
       aria-label="System pulse monitor"
-      className="flex max-h-64 flex-col overflow-hidden rounded-xl border border-zinc-300 bg-zinc-950 text-zinc-100 shadow-sm dark:border-zinc-700"
+      className="flex h-[80vh] flex-col overflow-hidden rounded-xl border border-zinc-300 bg-zinc-950 text-zinc-100 shadow-sm dark:border-zinc-700"
     >
-      <header className="border-b border-zinc-800 bg-zinc-900 px-4 py-2">
+      <header className="shrink-0 border-b border-zinc-800 bg-zinc-900 px-4 py-2">
         <h2 className="font-mono text-xs font-medium uppercase tracking-widest text-amber-400/90">
           System pulse
         </h2>
         <p className="font-mono text-[10px] text-zinc-500">backend lifecycle · broadcast stream</p>
       </header>
       <div
-        className="overflow-y-auto p-3 font-mono text-[11px] leading-relaxed text-zinc-300"
+        className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed text-zinc-300"
         style={{ fontFamily: "var(--font-geist-mono), ui-monospace, monospace" }}
       >
         {logs.length === 0 ? (
