@@ -1,7 +1,7 @@
 import { redis } from "./redis.js";
 
 /**
- * Broadcasts [GHOST] pulses when chat:* keys expire (requires notify-keyspace-events).
+ * Subscribes to Redis expired-key events; emits system pulse and chat:wipe for chat:* keys.
  */
 export async function attachRedisExpirePulses(io) {
   if (!redis.isOpen) {
@@ -18,14 +18,21 @@ export async function attachRedisExpirePulses(io) {
     const subscriber = redis.duplicate();
     await subscriber.connect();
 
-    await subscriber.subscribe("__keyevent@0__:expired", (expiredKey) => {
-      if (typeof expiredKey !== "string" || !expiredKey.startsWith("chat:")) {
+    await subscriber.pSubscribe("__keyevent@0__:expired", async (key, _channel) => {
+      if (typeof key !== "string" || !key.startsWith("chat:")) {
         return;
       }
+
       io.emit("system:pulse", {
         at: Date.now(),
         line: "[GHOST]: TTL reached 0. Redis memory purged.",
-        key: expiredKey,
+        key,
+      });
+
+      io.to(key).emit("chat:wipe", {
+        roomId: key,
+        at: Date.now(),
+        reason: "redis_ttl",
       });
     });
   } catch (err) {
