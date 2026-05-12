@@ -3,13 +3,21 @@ import { redis } from "../config/redis.js";
 const DEFAULT_MESSAGE_TTL_SECONDS = 120;
 
 export function getTTL() {
-  const ttl = Number(process.env.MESSAGE_TTL_SECONDS || 120);
+  const raw = process.env.MESSAGE_TTL_SECONDS;
 
-  if (Number.isFinite(ttl) && ttl > 0) {
-    return ttl;
+  if (raw === undefined || raw === null || String(raw).trim() === "") {
+    return DEFAULT_MESSAGE_TTL_SECONDS;
   }
 
-  return DEFAULT_MESSAGE_TTL_SECONDS;
+  const ttl = Number(raw);
+  if (!Number.isFinite(ttl) || ttl <= 0) {
+    console.warn(
+      `[config] Invalid MESSAGE_TTL_SECONDS (${JSON.stringify(raw)}). Using default ${DEFAULT_MESSAGE_TTL_SECONDS}s.`
+    );
+    return DEFAULT_MESSAGE_TTL_SECONDS;
+  }
+
+  return ttl;
 }
 
 export function getChatKey(uid1, uid2) {
