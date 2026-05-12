@@ -4,6 +4,7 @@ import { registerPresenceSocket } from "./presence.socket.js";
 import { registerRoomsSocket } from "./rooms.socket.js";
 import { registerMessagingSocket } from "./messaging.socket.js";
 import { registerSystemSocket } from "./system.socket.js";
+import { registerReadOnceSocket } from "./readonce.socket.js";
 
 export function attachSocketHandlers(io) {
   io.use(firebaseSocketAuth);
@@ -14,5 +15,6 @@ export function attachSocketHandlers(io) {
     registerRoomsSocket(io, socket);
     registerMessagingSocket(io, socket);
     registerSystemSocket(io, socket);
+    registerReadOnceSocket(io, socket);
   });
 }
