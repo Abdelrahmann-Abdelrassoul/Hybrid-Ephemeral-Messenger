@@ -41,7 +41,25 @@ export function getChatKey(uid1, uid2) {
   return `chat:${[uid1, uid2].sort().join("_")}`;
 }
 
+function getMessageText(message) {
+  if (message == null) return "";
+  if (typeof message === "string") return message.trim();
+  if (typeof message === "object") {
+    const raw = message.text ?? message.body ?? message.content;
+    if (typeof raw === "string") return raw.trim();
+  }
+  return "";
+}
+
+export function assertValidMessageBody(message) {
+  const content = getMessageText(message);
+  if (!content || content.length === 0) {
+    throw new Error("Message cannot be empty");
+  }
+}
+
 export async function saveMessage(uid1, uid2, message, ttlSecondsRequested) {
+  assertValidMessageBody(message);
   const chatKey = getChatKey(uid1, uid2);
   const serializedMessage = JSON.stringify(message);
   const ttlSeconds = resolveTtlForSave(ttlSecondsRequested);

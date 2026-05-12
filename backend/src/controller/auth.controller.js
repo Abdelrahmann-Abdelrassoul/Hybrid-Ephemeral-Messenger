@@ -1,5 +1,12 @@
 import User from "../models/User.js";
 
+export const getMeController = (req, res) => {
+  return res.status(200).json({
+    success: true,
+    user: req.user,
+  });
+};
+
 export const loginController = async (req, res, next) => {
   try {
     const firebaseUser = req.user;
