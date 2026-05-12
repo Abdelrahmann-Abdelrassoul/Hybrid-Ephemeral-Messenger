@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { auth } from "@/src/lib/firebase";
 import type { GhostDirectoryUser } from "@/src/components/UserList";
+import { encryptMessage } from "@/src/lib/ghostMessageCrypto";
 import { parseGhostMessagePayload } from "@/src/lib/parseGhostMessage";
 import { createAuthenticatedSocket } from "@/src/lib/sockets";
 import type { GhostChatMessage } from "@/src/components/GhostChat";
@@ -51,8 +52,9 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       const data = (await res.json()) as { messages?: unknown[] };
       const raw = Array.isArray(data.messages) ? data.messages : [];
       const mapped: GhostChatMessage[] = [];
+      const decryptCtx = { selfUid: me.uid, peerUid: peer };
       for (const m of raw) {
-        const p = parseGhostMessagePayload(m);
+        const p = parseGhostMessagePayload(m, decryptCtx);
         if (p) mapped.push({ id: crypto.randomUUID(), author: p.author, body: p.body });
       }
       setMessages(mapped);
@@ -142,7 +144,11 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       }
 
       socket.on("message:new", (msg: unknown) => {
-        const parsed = parseGhostMessagePayload(msg);
+        const peerTrim = peerUid.trim();
+        const parsed = parseGhostMessagePayload(
+          msg,
+          peerTrim ? { selfUid: user.uid, peerUid: peerTrim } : undefined
+        );
         if (!parsed) return;
         setMessages((prev) => [
           ...prev,
@@ -213,10 +219,11 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       if (!user || !peer || !socket?.connected) return;
 
       const author = user.displayName || user.email || user.uid.slice(0, 8);
+      const message = JSON.stringify({ author, text });
+      const encrypted = encryptMessage(message, user.uid, peer);
       socket.emit("message:send", {
-        senderUid: user.uid,
         receiverUid: peer,
-        message: { author, text },
+        content: encrypted,
         ttlSeconds: messageTtlSeconds,
       });
     },
