@@ -125,6 +125,29 @@ io.on("connection", (socket) => {
     socket.leave(roomId);
   });
 
+  socket.on("message:send", async (payload) => {
+    if (!payload || typeof payload !== "object") return;
+
+    const { senderUid, receiverUid, message } = payload;
+    if (
+      typeof senderUid !== "string" ||
+      typeof receiverUid !== "string" ||
+      message == null
+    ) {
+      return;
+    }
+
+    if (senderUid !== socket.user.uid) return;
+
+    try {
+      await saveMessage(senderUid, receiverUid, message);
+      io.to(`user:${receiverUid}`).emit("message:new", message);
+      io.to(`user:${senderUid}`).emit("message:new", message);
+    } catch (error) {
+      console.error("Failed to save message:", error);
+    }
+  });
+
   socket.on("chat:message", async ({ roomId, uid1, uid2, message }) => {
     const resolvedRoomId = resolveChatRoom({ roomId, uid1, uid2 });
     if (!resolvedRoomId || !uid1 || !uid2 || !message) return;
