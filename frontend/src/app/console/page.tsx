@@ -11,6 +11,7 @@ import {
 } from "@/src/features/console/useGhostChatSocket";
 import GhostChat from "@/src/components/GhostChat";
 import SystemPulseMonitor from "@/src/components/SystemPulseMonitor";
+import UserList from "@/src/components/UserList";
 
 export default function GhostConsolePage() {
   const router = useRouter();
@@ -76,7 +77,11 @@ export default function GhostConsolePage() {
 
   return (
     <main className="min-h-screen bg-zinc-50 p-6 dark:bg-black">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:flex-row lg:items-start">
+        <aside className="w-full shrink-0 lg:w-56 xl:w-64">
+          <UserList selectedUid={peerUid} onSelect={setPeerUid} />
+        </aside>
+        <div className="min-w-0 flex-1 flex flex-col gap-6">
         <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -178,6 +183,7 @@ export default function GhostConsolePage() {
             disabled={!peerOk || !socketReady}
           />
           <SystemPulseMonitor logs={logs} />
+        </div>
         </div>
       </div>
     </main>
