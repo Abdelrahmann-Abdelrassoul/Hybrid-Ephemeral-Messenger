@@ -1,9 +1,14 @@
-require("dotenv").config();
+import dotenv from "dotenv";
+import express from "express";
+import http from "http";
+import cors from "cors";
+import { Server } from "socket.io";
 
-const http = require("http");
-const express = require("express");
-const cors = require("cors");
-const { Server } = require("socket.io");
+import { connectRedis } from "./config/redis.js";
+import authRoutes from "./routes/auth.routes.js";
+import { getChatKey, getMessages, saveMessage } from "./services/message.service.js";
+
+dotenv.config();
 
 const app = express();
 
@@ -13,7 +18,10 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.json());
+
+app.use("/auth", authRoutes);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
@@ -30,31 +38,83 @@ const io = new Server(server, {
 
 const activeUsers = new Set();
 
+function resolveChatRoom(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  if (typeof payload === "string") {
+    return payload;
+  }
+
+  if (typeof payload === "object" && payload.uid1 && payload.uid2) {
+    return getChatKey(payload.uid1, payload.uid2);
+  }
+
+  return typeof payload === "object" ? payload.roomId ?? null : null;
+}
+
 io.on("connection", (socket) => {
   socket.on("presence:online", (userId) => {
     if (!userId) return;
+
     activeUsers.add(userId);
-    io.emit("presence:update", { userId, status: "online" });
+
+    io.emit("presence:update", {
+      userId,
+      status: "online",
+    });
   });
 
-  socket.on("room:join", (roomId) => {
+  socket.on("room:join", async (payload) => {
+    const roomId = resolveChatRoom(payload);
     if (!roomId) return;
+
     socket.join(roomId);
+
+    if (!payload || typeof payload !== "object" || !payload.uid1 || !payload.uid2) {
+      return;
+    }
+
+    try {
+      const messages = await getMessages(payload.uid1, payload.uid2);
+      socket.emit("chat:history", {
+        roomId,
+        messages,
+      });
+    } catch (error) {
+      console.error("Failed to load chat history:", error);
+    }
   });
 
-  socket.on("room:leave", (roomId) => {
+  socket.on("room:leave", (payload) => {
+    const roomId = resolveChatRoom(payload);
     if (!roomId) return;
+
     socket.leave(roomId);
   });
 
-  socket.on("chat:message", ({ roomId, message }) => {
-    if (!roomId || !message) return;
-    io.to(roomId).emit("chat:message", message);
+  socket.on("chat:message", async ({ roomId, uid1, uid2, message }) => {
+    const resolvedRoomId = resolveChatRoom({ roomId, uid1, uid2 });
+    if (!resolvedRoomId || !uid1 || !uid2 || !message) return;
+
+    try {
+      await saveMessage(uid1, uid2, message);
+      io.to(resolvedRoomId).emit("chat:message", message);
+    } catch (error) {
+      console.error("Failed to save chat message:", error);
+    }
   });
 
-  socket.on("chat:wipe", ({ roomId, initiatedBy }) => {
-    if (!roomId) return;
-    io.to(roomId).emit("chat:wipe", { roomId, initiatedBy, at: Date.now() });
+  socket.on("chat:wipe", ({ roomId, uid1, uid2, initiatedBy }) => {
+    const resolvedRoomId = resolveChatRoom({ roomId, uid1, uid2 });
+    if (!resolvedRoomId) return;
+
+    io.to(resolvedRoomId).emit("chat:wipe", {
+      roomId: resolvedRoomId,
+      initiatedBy,
+      at: Date.now(),
+    });
   });
 
   socket.on("system:pulse", (payload) => {
@@ -70,6 +130,16 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Backend listening on port ${PORT}`);
+
+async function startServer() {
+  await connectRedis();
+
+  server.listen(PORT, () => {
+    console.log(`Backend listening on port ${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Failed to start backend:", error);
+  process.exit(1);
 });
