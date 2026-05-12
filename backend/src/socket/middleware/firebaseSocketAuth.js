@@ -7,7 +7,12 @@ export async function firebaseSocketAuth(socket, next) {
       return next(new Error("Unauthorized"));
     }
     const decoded = await admin.auth().verifyIdToken(token);
-    socket.user = decoded;
+    socket.user = {
+      uid: decoded.uid,
+      email: decoded.email ?? "",
+      name: decoded.name ?? "",
+      claims: decoded,
+    };
     next();
   } catch {
     next(new Error("Unauthorized"));

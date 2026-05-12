@@ -9,12 +9,15 @@ type SystemPulseMonitorProps = {
 };
 
 function formatLine(pulse: SystemPulseLog): string {
-  const { at, ...rest } = pulse;
+  const { at, line, ...rest } = pulse as SystemPulseLog & { line?: string };
   const stamp = new Date(at).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   });
+  if (typeof line === "string") {
+    return `[${stamp}] ${line}`;
+  }
   const tail = Object.keys(rest).length ? JSON.stringify(rest) : "{}";
   return `[${stamp}] ${tail}`;
 }

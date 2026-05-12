@@ -17,7 +17,11 @@ export function registerMessagingSocket(io, socket) {
     if (senderUid !== socket.user.uid) return;
 
     try {
-      await saveMessage(senderUid, receiverUid, message);
+      const saved = await saveMessage(senderUid, receiverUid, message);
+      io.emit("system:pulse", {
+        at: Date.now(),
+        line: `[REDIS]: Key '${saved.key}' created (TTL: ${saved.ttl}s)`,
+      });
       io.to(`user:${receiverUid}`).emit("message:new", message);
       io.to(`user:${senderUid}`).emit("message:new", message);
     } catch (error) {
@@ -30,7 +34,11 @@ export function registerMessagingSocket(io, socket) {
     if (!resolvedRoomId || !uid1 || !uid2 || !message) return;
 
     try {
-      await saveMessage(uid1, uid2, message);
+      const saved = await saveMessage(uid1, uid2, message);
+      io.emit("system:pulse", {
+        at: Date.now(),
+        line: `[REDIS]: Key '${saved.key}' created (TTL: ${saved.ttl}s)`,
+      });
       io.to(resolvedRoomId).emit("chat:message", message);
     } catch (error) {
       console.error("Failed to save chat message:", error);

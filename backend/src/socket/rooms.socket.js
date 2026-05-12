@@ -10,6 +10,12 @@ export function registerRoomsSocket(io, socket) {
       const room = `chat:${[payload.uid1, payload.uid2].sort().join("_")}`;
       socket.join(room);
 
+      const label = socket.user.name || socket.user.email || socket.user.uid;
+      io.emit("system:pulse", {
+        at: Date.now(),
+        line: `[SOCKET]: User ${label} joined private room.`,
+      });
+
       try {
         const messages = await getMessages(payload.uid1, payload.uid2);
         socket.emit("chat:history", {
@@ -26,6 +32,12 @@ export function registerRoomsSocket(io, socket) {
     if (!roomId) return;
 
     socket.join(roomId);
+
+    const label = socket.user.name || socket.user.email || socket.user.uid;
+    io.emit("system:pulse", {
+      at: Date.now(),
+      line: `[SOCKET]: User ${label} joined room ${roomId}.`,
+    });
   });
 
   socket.on("room:leave", (payload) => {
