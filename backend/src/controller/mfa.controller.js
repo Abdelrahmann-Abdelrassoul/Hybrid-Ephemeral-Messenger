@@ -1,4 +1,5 @@
 import { createSmsVerification, isLikelyE164 } from "../services/twilioVerify.service.js";
+import { setPendingMfa } from "../services/mfaState.service.js";
 
 export async function startMfaController(req, res) {
   try {
@@ -11,6 +12,16 @@ export async function startMfaController(req, res) {
     }
 
     const verification = await createSmsVerification(phoneNumber.trim());
+
+    try {
+      await setPendingMfa(req.user.uid);
+    } catch (redisErr) {
+      console.error("mfa/start redis:", redisErr?.message ?? "unknown");
+      return res.status(503).json({
+        success: false,
+        message: "Verification SMS was sent but MFA session could not be stored. Try again shortly.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
