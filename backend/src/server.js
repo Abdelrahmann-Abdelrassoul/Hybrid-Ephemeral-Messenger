@@ -69,6 +69,8 @@ function resolveChatRoom(payload) {
 }
 
 io.on("connection", (socket) => {
+  socket.join(`user:${socket.user.uid}`);
+
   socket.on("presence:online", (_userId) => {
     const userId = socket.user && socket.user.uid;
     if (!userId) return;
