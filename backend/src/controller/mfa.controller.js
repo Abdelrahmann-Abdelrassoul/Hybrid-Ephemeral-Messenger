@@ -3,7 +3,7 @@ import {
   checkSmsVerification,
   isLikelyE164,
 } from "../services/twilioVerify.service.js";
-import { setPendingMfa, getPendingMfa, clearPendingMfa } from "../services/mfaState.service.js";
+import { setPendingMfa, getPendingMfa, promoteSessionToSecure } from "../services/mfaState.service.js";
 
 const PENDING_MFA = "PENDING_MFA";
 
@@ -102,9 +102,13 @@ export async function verifyMfaController(req, res) {
     }
 
     try {
-      await clearPendingMfa(req.user.uid);
-    } catch (clearErr) {
-      console.error("mfa/verify redis clear:", clearErr?.message ?? "unknown");
+      await promoteSessionToSecure(req.user.uid);
+    } catch (promoErr) {
+      console.error("mfa/verify promote session:", promoErr?.message ?? "unknown");
+      return res.status(503).json({
+        success: false,
+        message: "Verification succeeded but session could not be secured. Try again.",
+      });
     }
 
     return res.status(200).json({
