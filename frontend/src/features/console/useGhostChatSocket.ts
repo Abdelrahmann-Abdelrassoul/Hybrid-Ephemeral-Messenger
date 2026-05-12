@@ -69,6 +69,23 @@ export function useGhostChatSocket({ enabled }: UseGhostChatSocketOptions) {
       socket.on("system:pulse", (log: unknown) => {
         setLogs((prev) => [...prev, log as SystemPulseLog]);
       });
+
+      socket.on("presence:update", (raw: unknown) => {
+        const p = raw as { uid?: string; status?: string };
+        if (
+          typeof p.uid !== "string" ||
+          (p.status !== "online" && p.status !== "offline")
+        ) {
+          return;
+        }
+        setLogs((prev) => [
+          ...prev,
+          {
+            at: Date.now(),
+            line: `[PRESENCE]: ${p.uid} → ${p.status}`,
+          },
+        ]);
+      });
     });
 
     return () => {

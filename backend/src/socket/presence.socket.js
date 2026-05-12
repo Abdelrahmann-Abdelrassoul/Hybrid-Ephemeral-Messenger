@@ -4,33 +4,38 @@ const activeUsers = new Set();
 
 export function registerPresenceSocket(io, socket) {
   socket.on("presence:online", async (_userId) => {
-    const userId = socket.user && socket.user.uid;
-    if (!userId) return;
+    const uid = socket.user && socket.user.uid;
+    if (!uid) return;
 
     try {
-      await redis.set(`presence:${userId}`, "active");
+      await redis.set(`presence:${uid}`, "active");
     } catch (err) {
       console.error("presence redis set failed:", err);
     }
 
-    activeUsers.add(userId);
+    activeUsers.add(uid);
 
     io.emit("presence:update", {
-      userId,
+      uid,
       status: "online",
     });
   });
 
   socket.on("disconnect", async () => {
-    const userId = socket.user && socket.user.uid;
-    if (!userId) return;
+    const uid = socket.user && socket.user.uid;
+    if (!uid) return;
 
     try {
-      await redis.del(`presence:${userId}`);
+      await redis.del(`presence:${uid}`);
     } catch (err) {
       console.error("presence redis del failed:", err);
     }
 
-    activeUsers.delete(userId);
+    activeUsers.delete(uid);
+
+    io.emit("presence:update", {
+      uid,
+      status: "offline",
+    });
   });
 }
