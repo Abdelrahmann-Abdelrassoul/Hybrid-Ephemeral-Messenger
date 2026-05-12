@@ -24,11 +24,12 @@ export async function attachRedisExpirePulses(io) {
       }
 
       const chatRoom = key;
+      const ts = Date.now();
 
-      io.emit("system:pulse", {
-        at: Date.now(),
-        line: "[GHOST]: TTL reached 0. Redis memory purged.",
-        key: chatRoom,
+      io.to(chatRoom).emit("system:pulse", {
+        type: "GHOST",
+        message: "TTL reached 0. Redis memory purged.",
+        timestamp: ts,
       });
 
       io.to(chatRoom).emit("chat:wipe", { chatKey: chatRoom });

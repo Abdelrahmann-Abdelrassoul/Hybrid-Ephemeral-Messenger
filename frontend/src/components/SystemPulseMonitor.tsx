@@ -1,7 +1,8 @@
 "use client";
 
 export type SystemPulseLog = {
-  at: number;
+  at?: number;
+  timestamp?: number;
 } & Record<string, unknown>;
 
 type SystemPulseMonitorProps = {
@@ -9,15 +10,30 @@ type SystemPulseMonitorProps = {
 };
 
 function formatLine(pulse: SystemPulseLog): string {
-  const { at, line, ...rest } = pulse as SystemPulseLog & { line?: string };
-  const stamp = new Date(at).toLocaleTimeString([], {
+  const p = pulse as SystemPulseLog & {
+    line?: string;
+    message?: string;
+    type?: string;
+  };
+  const t =
+    typeof p.timestamp === "number"
+      ? p.timestamp
+      : typeof p.at === "number"
+        ? p.at
+        : Date.now();
+  const stamp = new Date(t).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   });
-  if (typeof line === "string") {
-    return `[${stamp}] ${line}`;
+  if (typeof p.message === "string" && p.message.length > 0) {
+    const tag = typeof p.type === "string" && p.type.length > 0 ? `[${p.type}] ` : "";
+    return `[${stamp}] ${tag}${p.message}`;
   }
+  if (typeof p.line === "string") {
+    return `[${stamp}] ${p.line}`;
+  }
+  const { timestamp: _ts, at: _at, line: _ln, message: _m, type: _ty, ...rest } = p;
   const tail = Object.keys(rest).length ? JSON.stringify(rest) : "{}";
   return `[${stamp}] ${tail}`;
 }
@@ -43,7 +59,10 @@ export default function SystemPulseMonitor({ logs }: SystemPulseMonitorProps) {
         ) : (
           <ul className="flex flex-col gap-1">
             {logs.map((pulse, index) => (
-              <li key={`${pulse.at}-${index}`} className="list-none whitespace-pre-wrap break-all">
+              <li
+                key={`${(pulse as { timestamp?: number }).timestamp ?? pulse.at ?? index}-${index}`}
+                className="list-none whitespace-pre-wrap break-all"
+              >
                 {formatLine(pulse)}
               </li>
             ))}
