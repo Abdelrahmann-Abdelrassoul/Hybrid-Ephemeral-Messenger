@@ -3,6 +3,7 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
+import { connectDB } from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
 import authRoutes from "./routes/auth.routes.js";
 import { attachSocketHandlers } from "./socket/index.js";
@@ -40,6 +41,7 @@ attachSocketHandlers(io);
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
+  await connectDB();
   await connectRedis();
 
   server.listen(PORT, () => {
