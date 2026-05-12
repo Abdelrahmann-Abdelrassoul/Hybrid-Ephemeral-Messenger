@@ -23,17 +23,15 @@ export async function attachRedisExpirePulses(io) {
         return;
       }
 
+      const chatRoom = key;
+
       io.emit("system:pulse", {
         at: Date.now(),
         line: "[GHOST]: TTL reached 0. Redis memory purged.",
-        key,
+        key: chatRoom,
       });
 
-      io.to(key).emit("chat:wipe", {
-        roomId: key,
-        at: Date.now(),
-        reason: "redis_ttl",
-      });
+      io.to(chatRoom).emit("chat:wipe", { chatKey: chatRoom });
     });
   } catch (err) {
     console.warn("[pulse] Redis expire subscription failed:", err?.message ?? err);
