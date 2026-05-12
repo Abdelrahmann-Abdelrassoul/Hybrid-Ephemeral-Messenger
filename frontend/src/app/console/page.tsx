@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/src/lib/firebase";
-import GhostChat from "@/components/GhostChat";
+import { useGhostChatSocket } from "@/src/features/console/useGhostChatSocket";
+import GhostChat from "@/src/components/GhostChat";
 
 export default function GhostConsolePage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [label, setLabel] = useState<string | null>(null);
+
+  const { peerUid, setPeerUid, messages, socketReady, sendMessage, peerOk } = useGhostChatSocket({
+    enabled: ready,
+  });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -49,7 +54,26 @@ export default function GhostConsolePage() {
             Sign out
           </button>
         </header>
-        <GhostChat />
+
+        <div className="flex flex-col gap-2">
+          <label className="font-mono text-xs text-zinc-600 dark:text-zinc-400" htmlFor="peer-uid">
+            Peer Firebase UID (required to send and receive DMs)
+          </label>
+          <input
+            id="peer-uid"
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            placeholder="other-user-uid"
+            value={peerUid}
+            onChange={(e) => setPeerUid(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+
+        <GhostChat
+          messages={messages}
+          onSend={sendMessage}
+          disabled={!peerOk || !socketReady}
+        />
       </div>
     </main>
   );
