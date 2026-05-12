@@ -3,10 +3,9 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
-import admin from "./config/firebaseAdmin.js";
 import { connectRedis } from "./config/redis.js";
 import authRoutes from "./routes/auth.routes.js";
-import { getChatKey, getMessages, saveMessage } from "./services/message.service.js";
+import { attachSocketHandlers } from "./socket/index.js";
 
 dotenv.config();
 
@@ -36,152 +35,7 @@ const io = new Server(server, {
   },
 });
 
-io.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth && socket.handshake.auth.token;
-    if (!token || typeof token !== "string") {
-      return next(new Error("Unauthorized"));
-    }
-    const decoded = await admin.auth().verifyIdToken(token);
-    socket.user = decoded;
-    next();
-  } catch (err) {
-    next(new Error("Unauthorized"));
-  }
-});
-
-const activeUsers = new Set();
-
-function resolveChatRoom(payload) {
-  if (!payload) {
-    return null;
-  }
-
-  if (typeof payload === "string") {
-    return payload;
-  }
-
-  if (typeof payload === "object" && payload.uid1 && payload.uid2) {
-    return getChatKey(payload.uid1, payload.uid2);
-  }
-
-  return typeof payload === "object" ? payload.roomId ?? null : null;
-}
-
-io.on("connection", (socket) => {
-  socket.join(`user:${socket.user.uid}`);
-
-  socket.on("presence:online", (_userId) => {
-    const userId = socket.user && socket.user.uid;
-    if (!userId) return;
-
-    activeUsers.add(userId);
-
-    io.emit("presence:update", {
-      userId,
-      status: "online",
-    });
-  });
-
-  socket.on("room:join", async (payload) => {
-    if (payload && typeof payload === "object" && payload.uid1 && payload.uid2) {
-      const me = socket.user.uid;
-      if (me !== payload.uid1 && me !== payload.uid2) return;
-
-      const room = `chat:${[payload.uid1, payload.uid2].sort().join("_")}`;
-      socket.join(room);
-
-      try {
-        const messages = await getMessages(payload.uid1, payload.uid2);
-        socket.emit("chat:history", {
-          roomId: room,
-          messages,
-        });
-      } catch (error) {
-        console.error("Failed to load chat history:", error);
-      }
-      return;
-    }
-
-    const roomId = resolveChatRoom(payload);
-    if (!roomId) return;
-
-    socket.join(roomId);
-  });
-
-  socket.on("room:leave", (payload) => {
-    if (payload && typeof payload === "object" && payload.uid1 && payload.uid2) {
-      const me = socket.user.uid;
-      if (me !== payload.uid1 && me !== payload.uid2) return;
-
-      const room = `chat:${[payload.uid1, payload.uid2].sort().join("_")}`;
-      socket.leave(room);
-      return;
-    }
-
-    const roomId = resolveChatRoom(payload);
-    if (!roomId) return;
-
-    socket.leave(roomId);
-  });
-
-  socket.on("message:send", async (payload) => {
-    if (!payload || typeof payload !== "object") return;
-
-    const { senderUid, receiverUid, message } = payload;
-    if (
-      typeof senderUid !== "string" ||
-      typeof receiverUid !== "string" ||
-      message == null
-    ) {
-      return;
-    }
-
-    if (senderUid !== socket.user.uid) return;
-
-    try {
-      await saveMessage(senderUid, receiverUid, message);
-      io.to(`user:${receiverUid}`).emit("message:new", message);
-      io.to(`user:${senderUid}`).emit("message:new", message);
-    } catch (error) {
-      console.error("Failed to save message:", error);
-    }
-  });
-
-  socket.on("chat:message", async ({ roomId, uid1, uid2, message }) => {
-    const resolvedRoomId = resolveChatRoom({ roomId, uid1, uid2 });
-    if (!resolvedRoomId || !uid1 || !uid2 || !message) return;
-
-    try {
-      await saveMessage(uid1, uid2, message);
-      io.to(resolvedRoomId).emit("chat:message", message);
-    } catch (error) {
-      console.error("Failed to save chat message:", error);
-    }
-  });
-
-  socket.on("chat:wipe", ({ roomId, uid1, uid2, initiatedBy }) => {
-    const resolvedRoomId = resolveChatRoom({ roomId, uid1, uid2 });
-    if (!resolvedRoomId) return;
-
-    io.to(resolvedRoomId).emit("chat:wipe", {
-      roomId: resolvedRoomId,
-      initiatedBy,
-      at: Date.now(),
-    });
-  });
-
-  socket.on("system:pulse", (payload) => {
-    io.emit("system:pulse", {
-      at: Date.now(),
-      ...payload,
-    });
-  });
-
-  socket.on("disconnect", () => {
-    // Presence offlining can be tied to session/user mapping as needed.
-  });
-});
+attachSocketHandlers(io);
 
 const PORT = process.env.PORT || 5000;
 
