@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/src/lib/firebase";
+import GhostChat from "@/components/GhostChat";
 
 export default function GhostConsolePage() {
   const router = useRouter();
@@ -48,12 +49,7 @@ export default function GhostConsolePage() {
             Sign out
           </button>
         </header>
-        <section
-          aria-label="Chat area placeholder"
-          className="rounded-xl border border-dashed border-zinc-300 bg-white/60 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950/60 dark:text-zinc-400"
-        >
-          Chat UI will live here.
-        </section>
+        <GhostChat />
       </div>
     </main>
   );
