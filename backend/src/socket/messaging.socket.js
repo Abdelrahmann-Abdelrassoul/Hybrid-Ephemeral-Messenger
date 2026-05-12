@@ -5,28 +5,35 @@ export function registerMessagingSocket(io, socket) {
   socket.on("message:send", async (payload) => {
     if (!payload || typeof payload !== "object") return;
 
-    const { senderUid, receiverUid, message, ttlSeconds } = payload;
-    if (
-      typeof senderUid !== "string" ||
-      typeof receiverUid !== "string" ||
-      message == null
-    ) {
+    const senderUid = socket.user.uid;
+    const { receiverUid, ttlSeconds, content, message } = payload;
+
+    if (typeof receiverUid !== "string" || typeof senderUid !== "string") {
+      return;
+    }
+    if (senderUid === receiverUid) return;
+
+    let messageToSave;
+    if (typeof content === "string" && content.trim().length > 0) {
+      messageToSave = { content: content.trim() };
+    } else if (message != null) {
+      messageToSave = message;
+    } else {
       return;
     }
 
-    if (senderUid !== socket.user.uid) return;
-    if (senderUid === receiverUid) return;
-
     try {
-      const saved = await saveMessage(senderUid, receiverUid, message, ttlSeconds);
+      await saveMessage(senderUid, receiverUid, messageToSave, ttlSeconds);
       io.emit("system:pulse", {
         at: Date.now(),
-        line: `[REDIS]: Key '${saved.key}' created (TTL: ${saved.ttl}s)`,
+        line: "[REDIS]: Encrypted message stored.",
       });
-      io.to(`user:${receiverUid}`).emit("message:new", message);
-      io.to(`user:${senderUid}`).emit("message:new", message);
+      io.to(`user:${receiverUid}`).emit("message:new", messageToSave);
+      io.to(`user:${senderUid}`).emit("message:new", messageToSave);
     } catch (error) {
-      console.error("Failed to save message:", error);
+      const msg =
+        error instanceof Error ? error.message : typeof error === "string" ? error : "unknown";
+      console.error("Failed to save message:", msg);
     }
   });
 
@@ -36,14 +43,16 @@ export function registerMessagingSocket(io, socket) {
     if (uid1 === uid2) return;
 
     try {
-      const saved = await saveMessage(uid1, uid2, message, ttlSeconds);
+      await saveMessage(uid1, uid2, message, ttlSeconds);
       io.emit("system:pulse", {
         at: Date.now(),
-        line: `[REDIS]: Key '${saved.key}' created (TTL: ${saved.ttl}s)`,
+        line: "[REDIS]: Encrypted message stored.",
       });
       io.to(resolvedRoomId).emit("chat:message", message);
     } catch (error) {
-      console.error("Failed to save chat message:", error);
+      const msg =
+        error instanceof Error ? error.message : typeof error === "string" ? error : "unknown";
+      console.error("Failed to save chat message:", msg);
     }
   });
 

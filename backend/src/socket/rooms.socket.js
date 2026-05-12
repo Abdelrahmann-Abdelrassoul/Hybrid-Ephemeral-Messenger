@@ -23,7 +23,10 @@ export function registerRoomsSocket(io, socket) {
           messages,
         });
       } catch (error) {
-        console.error("Failed to load chat history:", error);
+        console.error(
+          "Failed to load chat history:",
+          error instanceof Error ? error.message : "unknown"
+        );
       }
       return;
     }
